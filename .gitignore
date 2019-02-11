@@ -1,2 +1,5 @@
 *.class
 *.log
+*.class
+.idea
+target/
