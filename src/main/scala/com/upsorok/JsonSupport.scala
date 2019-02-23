@@ -3,12 +3,13 @@ package com.upsorok
 import java.time.Instant
 import java.util.UUID
 
-import com.upsorok.address.{ Address, Country, USState }
+import com.upsorok.address.{Address, Country, USState}
 import com.upsorok.business.Business
 import com.upsorok.review.Review
+import com.upsorok.review.ReviewActor.SaveReview
 import com.upsorok.user.UserActor.ActionPerformed
-import com.upsorok.user.{ Author, Name, User, Users }
-import spray.json.{ DeserializationException, JsString, JsValue, JsonFormat }
+import com.upsorok.user.{Author, Name, User, Users}
+import spray.json.{DeserializationException, JsString, JsValue, JsonFormat}
 
 //#json-support
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -65,6 +66,7 @@ trait JsonSupport extends SprayJsonSupport {
   implicit val userJsonFormat = jsonFormat3(User)
   implicit val usersJsonFormat = jsonFormat1(Users)
 
+  implicit val saveReviewJsonFormat = jsonFormat4(SaveReview)
   implicit val reviewJsonFormat = jsonFormat7(Review)
 
   implicit val actionPerformedJsonFormat = jsonFormat1(ActionPerformed)

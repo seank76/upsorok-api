@@ -4,15 +4,19 @@ import java.time.Instant
 import java.util.UUID
 
 import com.upsorok.business.Business
+import com.upsorok.datastore.WithUUID
 import com.upsorok.user.Author
 
 case class Review(
-  uuid: UUID,
+  uuid: Option[UUID],
   author: Author,
   business: Business,
   visitedDate: Instant,
   text: String,
   created: Instant,
-  updated: Instant)
+  updated: Instant) extends WithUUID[Review] {
+
+  override def withUUID(uuid: UUID): Review = copy(uuid = Some(uuid))
+}
 
 case class Reviews(reviews: Seq[Review])

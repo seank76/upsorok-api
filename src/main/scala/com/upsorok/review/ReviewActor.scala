@@ -1,22 +1,19 @@
 package com.upsorok.review
 
 import java.time.Instant
-import java.util
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, Props}
-import com.upsorok.address.{Address, Country, USState}
-import com.upsorok.business.Business
-import com.upsorok.datastore.ReviewDataStore
-import com.upsorok.exception.ItemNotFoundException
-import com.upsorok.user.{Author, Name}
+import com.upsorok.address.Address
+import com.upsorok.exception.{AuthorNotFoundException, BusinessNotFoundException, ReviewNotFoundException}
+import com.upsorok.user.Author
 
 import scala.util.{Failure, Success, Try}
 
 object ReviewActor {
   final case class GetReview(uuid: UUID)
   final case class SearchReview(author: Option[Author], location: Option[Address])
-  final case class SaveReview(review: Review)
+  final case class SaveReview(authorUUID: UUID, businessUUID: UUID, review: String, visitedDate: Instant)
 
   def props: Props = Props[ReviewActor]
 }
@@ -24,10 +21,12 @@ object ReviewActor {
 class ReviewActor extends Actor with ActorLogging {
 
   import ReviewActor._
+  import com.upsorok.datastore.DataStore._
 
   def receive: Receive = {
     case GetReview(uuid) => sender() ! loadReview(uuid)
-    case SaveReview(review) => sender() ! saveReview(review)
+    case SaveReview(authorUUID, businessUUID, review, visitedDate) =>
+      sender() ! saveReview(authorUUID, businessUUID, review, visitedDate)
     case SearchReview(Some(author), None) =>
     case SearchReview(None, Some(location)) =>
     case SearchReview(Some(author), Some(location)) =>
@@ -35,13 +34,17 @@ class ReviewActor extends Actor with ActorLogging {
   }
 
   private def loadReview(uuid: UUID): Try[Review] = {
-    ReviewDataStore.get(uuid)
+    reviewDataStore.get(uuid)
       .map(review => Success(review))
-      .getOrElse(Failure(ItemNotFoundException("Could not find review " + uuid)))
+      .getOrElse(Failure(ReviewNotFoundException(uuid)))
   }
 
-  private def saveReview(review: Review): Try[String] = {
-    ReviewDataStore.save(review)
-        .map(uuid => "Successfully added review " + uuid)
+  private def saveReview(authorUUID: UUID, businessUUID: UUID, reviewText: String, visitedDate: Instant): Try[String] = {
+    authorDataStore.get(authorUUID).map(author => {
+      businessDataStore.get(businessUUID).map(business => {
+        reviewDataStore.save(Review(None, author, business, visitedDate, reviewText, Instant.now(), Instant.now()))
+          .map(uuid => "Successfully added review " + uuid)
+      }).getOrElse(Failure(BusinessNotFoundException(businessUUID)))
+    }).getOrElse(Failure(AuthorNotFoundException(authorUUID)))
   }
 }

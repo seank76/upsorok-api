@@ -45,9 +45,9 @@ trait ReviewRoutes extends JsonSupport {
       },
       path( "add_review") {
         post {
-          entity(as[Review]) { review =>
+          entity(as[SaveReview]) { review =>
             val resp: Future[(StatusCode, String)] =
-              (reviewRegistryActor ? SaveReview(review)).mapTo[Try[String]]
+              (reviewRegistryActor ? review).mapTo[Try[String]]
                   .map(_ match {
                     case Success(msg) => (StatusCodes.OK, msg)
                     case Failure(ex) => (StatusCodes.BadRequest, ex.getMessage)
