@@ -1,11 +1,12 @@
 lazy val akkaHttpVersion = "10.1.7"
 lazy val akkaVersion    = "2.5.20"
+lazy val enumeratumVersion = "1.5.13"
 
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
-      organization    := "com.upsorok",
-      scalaVersion    := "2.12.8"
+      organization      := "com.upsorok",
+      scalaVersion      := "2.12.8"
     )),
     name := "upsorok-api",
     libraryDependencies ++= Seq(
@@ -13,6 +14,7 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-xml"        % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
+      "com.beachape"      %% "enumeratum"           % enumeratumVersion,
 
       "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,

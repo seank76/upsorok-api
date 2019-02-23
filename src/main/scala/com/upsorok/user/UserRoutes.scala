@@ -1,10 +1,10 @@
 package com.upsorok.user
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor._
 import akka.event.Logging
+import akka.pattern.ask
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.model.Uri.Path.Segment
-import akka.http.scaladsl.server.Directives.{as, concat, entity, onSuccess, pathEnd, pathPrefix, rejectEmptyResponse}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.{delete, get, post}
 import akka.http.scaladsl.server.directives.PathDirectives.path
@@ -14,6 +14,7 @@ import com.upsorok.JsonSupport
 import com.upsorok.user.UserRegistryActor._
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 //#user-routes-class
 trait UserRoutes extends JsonSupport {

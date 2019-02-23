@@ -29,7 +29,7 @@ object UpSoRokAPIServer extends App with UserRoutes {
   //#main-class
 
   //#http-server
-  val serverBinding: Future[Http.ServerBinding] = Http().bindAndHandle(routes, "localhost", 8080)
+  val serverBinding: Future[Http.ServerBinding] = Http().bindAndHandle(routes, "localhost", 1818)
 
   serverBinding.onComplete {
     case Success(bound) =>
