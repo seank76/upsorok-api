@@ -8,10 +8,16 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
+import com.upsorok.review.{ReviewRegistryActor, ReviewRoutes}
 import com.upsorok.user.{UserRegistryActor, UserRoutes}
+import akka.http.scaladsl.server.Directives._
+import akka.util.Timeout
+
+import scala.concurrent.duration._
 
 //#main-class
-object UpSoRokAPIServer extends App with UserRoutes {
+object UpSoRokAPIServer extends App
+  with UserRoutes with ReviewRoutes {
 
   // set up ActorSystem and other dependencies here
   //#main-class
@@ -19,13 +25,14 @@ object UpSoRokAPIServer extends App with UserRoutes {
   implicit val system: ActorSystem = ActorSystem("upsorokAkkaHttpServer")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContext = system.dispatcher
+  implicit override val timeout: Timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
   //#server-bootstrapping
 
   val userRegistryActor: ActorRef = system.actorOf(UserRegistryActor.props, "userRegistryActor")
+  val reviewRegistryActor: ActorRef = system.actorOf(ReviewRegistryActor.props, "reviewRegistryActor")
 
   //#main-class
-  // from the UserRoutes trait
-  lazy val routes: Route = userRoutes
+  lazy val routes: Route = concat(userRoutes, reviewRoutes)
   //#main-class
 
   //#http-server

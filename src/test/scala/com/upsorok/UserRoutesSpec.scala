@@ -6,14 +6,17 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import akka.util.Timeout
 import com.upsorok.user.{User, UserRegistryActor, UserRoutes}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
+import scala.concurrent.duration._
 
 //#set-up
 class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest
     with UserRoutes {
-  //#test-top
+
+  implicit override val timeout: Timeout = Timeout(5.seconds)
 
   // Here we need to implement all the abstract members of UserRoutes.
   // We use the real UserRegistryActor to test it while we hit the Routes, 
