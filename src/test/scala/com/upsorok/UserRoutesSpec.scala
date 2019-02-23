@@ -7,7 +7,7 @@ import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.util.Timeout
-import com.upsorok.user.{User, UserRegistryActor, UserRoutes}
+import com.upsorok.user.{User, UserActor, UserRoutes}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
 import scala.concurrent.duration._
@@ -22,7 +22,7 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
   // We use the real UserRegistryActor to test it while we hit the Routes, 
   // but we could "mock" it by implementing it in-place or by using a TestProbe() 
   override val userRegistryActor: ActorRef =
-    system.actorOf(UserRegistryActor.props, "userRegistry")
+    system.actorOf(UserActor.props, "userRegistry")
 
   lazy val routes = userRoutes
 

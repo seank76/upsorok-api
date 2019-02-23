@@ -3,12 +3,12 @@ package com.upsorok
 import java.time.Instant
 import java.util.UUID
 
-import com.upsorok.address.{Address, Country, USState}
+import com.upsorok.address.{ Address, Country, USState }
 import com.upsorok.business.Business
 import com.upsorok.review.Review
-import com.upsorok.user.UserRegistryActor.ActionPerformed
-import com.upsorok.user.{Author, Name, User, Users}
-import spray.json.{DeserializationException, JsString, JsValue, JsonFormat}
+import com.upsorok.user.UserActor.ActionPerformed
+import com.upsorok.user.{ Author, Name, User, Users }
+import spray.json.{ DeserializationException, JsString, JsValue, JsonFormat }
 
 //#json-support
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -23,7 +23,7 @@ trait JsonSupport extends SprayJsonSupport {
     def read(value: JsValue) = {
       value match {
         case JsString(uuid) => UUID.fromString(uuid)
-        case _              => throw new DeserializationException("Expected hexadecimal UUID string")
+        case _ => throw new DeserializationException("Expected hexadecimal UUID string")
       }
     }
   }
@@ -33,7 +33,7 @@ trait JsonSupport extends SprayJsonSupport {
     def read(value: JsValue) = {
       value match {
         case JsString(instantString) => Instant.parse(instantString)
-        case _              => throw new DeserializationException("Expected Instant string")
+        case _ => throw new DeserializationException("Expected Instant string")
       }
     }
   }
@@ -43,7 +43,7 @@ trait JsonSupport extends SprayJsonSupport {
     def read(value: JsValue) = {
       value match {
         case JsString(stateString) => USState.withName(stateString)
-        case _              => throw new DeserializationException("Expected State string")
+        case _ => throw new DeserializationException("Expected State string")
       }
     }
   }
@@ -53,7 +53,7 @@ trait JsonSupport extends SprayJsonSupport {
     def read(value: JsValue) = {
       value match {
         case JsString(countryString) => Country.withName(countryString)
-        case _              => throw new DeserializationException("Expected Country string")
+        case _ => throw new DeserializationException("Expected Country string")
       }
     }
   }

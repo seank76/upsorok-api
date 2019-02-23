@@ -2,6 +2,8 @@ package com.upsorok.review
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.Logging
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.get
@@ -9,9 +11,10 @@ import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.ask
 import akka.util.Timeout
 import com.upsorok.JsonSupport
-import com.upsorok.review.ReviewRegistryActor._
+import com.upsorok.review.ReviewActor._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 trait ReviewRoutes extends JsonSupport {
 
@@ -25,12 +28,33 @@ trait ReviewRoutes extends JsonSupport {
   // Required by the `ask` (?) method below
   implicit def timeout: Timeout
 
+  implicit def executionContext: ExecutionContext
+
   lazy val reviewRoutes: Route =
-    path("review" / JavaUUID) { uuid =>
-      get {
-        val review: Future[Review] =
-          (reviewRegistryActor ? GetReview(uuid)).mapTo[Review]
-        complete(review)
+    concat(
+      path("review" / JavaUUID) { uuid =>
+        get {
+          val resp: Future[(StatusCode, Option[Review])] =
+            (reviewRegistryActor ? GetReview(uuid)).mapTo[Try[Review]]
+                .map(_ match {
+                  case Success(review) => (StatusCodes.OK, Some(review))
+                  case Failure(ex) => (StatusCodes.BadRequest, None)
+                })
+          complete(resp)
+        }
+      },
+      path( "add_review") {
+        post {
+          entity(as[Review]) { review =>
+            val resp: Future[(StatusCode, String)] =
+              (reviewRegistryActor ? SaveReview(review)).mapTo[Try[String]]
+                  .map(_ match {
+                    case Success(msg) => (StatusCodes.OK, msg)
+                    case Failure(ex) => (StatusCodes.BadRequest, ex.getMessage)
+                  })
+            complete(resp)
+          }
+        }
       }
-    }
+    )
 }
