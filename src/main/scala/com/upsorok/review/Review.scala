@@ -5,11 +5,11 @@ import java.util.UUID
 
 import com.upsorok.business.Business
 import com.upsorok.datastore.WithUUID
-import com.upsorok.user.Author
+import com.upsorok.user.User
 
 case class Review(
   uuid: Option[UUID],
-  author: Author,
+  author: User,
   business: Business,
   visitedDate: Instant,
   text: String,

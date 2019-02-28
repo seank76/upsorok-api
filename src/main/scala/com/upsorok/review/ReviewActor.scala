@@ -5,14 +5,14 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, Props}
 import com.upsorok.address.Address
-import com.upsorok.exception.{AuthorNotFoundException, BusinessNotFoundException, ReviewNotFoundException}
-import com.upsorok.user.Author
+import com.upsorok.exception.{BusinessNotFoundException, ReviewNotFoundException, UserNotFoundException}
+import com.upsorok.user.User
 
 import scala.util.{Failure, Success, Try}
 
 object ReviewActor {
   final case class GetReview(uuid: UUID)
-  final case class SearchReview(author: Option[Author], location: Option[Address])
+  final case class SearchReview(author: Option[User], location: Option[Address])
   final case class SaveReview(authorUUID: UUID, businessUUID: UUID, review: String, visitedDate: Instant)
 
   def props: Props = Props[ReviewActor]
@@ -40,11 +40,11 @@ class ReviewActor extends Actor with ActorLogging {
   }
 
   private def saveReview(authorUUID: UUID, businessUUID: UUID, reviewText: String, visitedDate: Instant): Try[String] = {
-    authorDataStore.get(authorUUID).map(author => {
+    userDataStore.get(authorUUID).map(author => {
       businessDataStore.get(businessUUID).map(business => {
         reviewDataStore.save(Review(None, author, business, visitedDate, reviewText, Instant.now(), Instant.now()))
           .map(uuid => "Successfully added review " + uuid)
       }).getOrElse(Failure(BusinessNotFoundException(businessUUID)))
-    }).getOrElse(Failure(AuthorNotFoundException(authorUUID)))
+    }).getOrElse(Failure(UserNotFoundException(authorUUID)))
   }
 }
