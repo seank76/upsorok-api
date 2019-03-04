@@ -10,9 +10,9 @@ import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.ask
 import akka.util.Timeout
 import com.upsorok.JsonSupport
-import com.upsorok.business.BusinessActor.{GetAllBusinesses, GetBusiness, SaveBusiness}
+import com.upsorok.business.BusinessActor.{GetAllBusinesses, GetBusiness, SaveBusiness, SaveBusinessWithPromise}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 trait BusinessRoutes extends JsonSupport {
@@ -33,13 +33,9 @@ trait BusinessRoutes extends JsonSupport {
     concat(
       path("business" / JavaUUID) { uuid =>
         get {
-          val resp: Future[(StatusCode, Option[Business])] =
-            (businessActor ? GetBusiness(uuid)).mapTo[Try[Business]]
-                .map(_ match {
-                  case Success(business) => (StatusCodes.OK, Some(business))
-                  case Failure(ex) => (StatusCodes.NotFound, None)
-                })
-          complete(resp)
+          val promise = Promise[Business]()
+          businessActor ! GetBusiness(promise, uuid)
+          complete(promise.future)
         }
       },
       path("businesses") {
@@ -55,14 +51,11 @@ trait BusinessRoutes extends JsonSupport {
       },
       path( "add_business") {
         post {
-          entity(as[SaveBusiness]) { business =>
-            val resp: Future[(StatusCode, String)] =
-              (businessActor ? business).mapTo[Try[String]]
-                  .map(_ match {
-                    case Success(msg) => (StatusCodes.OK, msg)
-                    case Failure(ex) => (StatusCodes.BadRequest, ex.getMessage)
-                  })
-            complete(resp)
+          entity(as[SaveBusiness]) { sb =>
+            val promise = Promise[Business]()
+            businessActor ! SaveBusinessWithPromise(promise, sb)
+
+            complete(promise.future)
           }
         }
       }

@@ -1,20 +1,22 @@
 package com.upsorok
 
 //#quick-start-server
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
-import com.upsorok.review.{ReviewActor, ReviewRoutes}
-import com.upsorok.user.{UserActor, UserRoutes}
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.{ExceptionHandler, Route}
+import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.upsorok.business.{BusinessActor, BusinessRoutes}
+import com.upsorok.datastore.DataStoreHub
+import com.upsorok.exception.{BusinessNotFoundException, ReviewNotFoundException, UserNotFoundException}
+import com.upsorok.review.{ReviewActor, ReviewRoutes}
+import com.upsorok.user.{UserActor, UserRoutes}
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 //#main-class
 object UpSoRokAPIServer extends App
@@ -29,9 +31,21 @@ object UpSoRokAPIServer extends App
   implicit override val timeout: Timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
   //#server-bootstrapping
 
-  val userActor: ActorRef = system.actorOf(UserActor.props, "userActor")
-  val reviewActor: ActorRef = system.actorOf(ReviewActor.props, "reviewActor")
-  val businessActor: ActorRef = system.actorOf(BusinessActor.props, "businessActor")
+  val dataStore: DataStoreHub = new DataStoreHub
+
+  val userActor: ActorRef = system.actorOf(UserActor.props(dataStore), "userActor")
+  val reviewActor: ActorRef = system.actorOf(ReviewActor.props(dataStore), "reviewActor")
+  val businessActor: ActorRef = system.actorOf(BusinessActor.props(dataStore), "businessActor")
+
+  implicit def upsorokExceptionHandler: ExceptionHandler =
+    ExceptionHandler {
+      case BusinessNotFoundException(uuid) =>
+        complete(HttpResponse(StatusCodes.NotFound, entity = s"Business(${uuid}) is not found"))
+      case ReviewNotFoundException(uuid) =>
+        complete(HttpResponse(StatusCodes.NotFound, entity = s"Review(${uuid}) is not found"))
+      case UserNotFoundException(uuid) =>
+        complete(HttpResponse(StatusCodes.NotFound, entity = s"User(${uuid}) is not found"))
+    }
 
   //#main-class
   lazy val routes: Route = concat(userRoutes, reviewRoutes, businessRoutes)

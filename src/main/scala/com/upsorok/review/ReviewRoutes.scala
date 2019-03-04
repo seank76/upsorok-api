@@ -2,7 +2,6 @@ package com.upsorok.review
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.Logging
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -13,7 +12,7 @@ import akka.util.Timeout
 import com.upsorok.JsonSupport
 import com.upsorok.review.ReviewActor._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
 trait ReviewRoutes extends JsonSupport {
@@ -34,25 +33,18 @@ trait ReviewRoutes extends JsonSupport {
     concat(
       path("review" / JavaUUID) { uuid =>
         get {
-          val resp: Future[(StatusCode, Option[Review])] =
-            (reviewActor ? GetReview(uuid)).mapTo[Try[Review]]
-                .map(_ match {
-                  case Success(review) => (StatusCodes.OK, Some(review))
-                  case Failure(ex) => (StatusCodes.NotFound, None)
-                })
-          complete(resp)
+          val promise = Promise[Review]()
+          reviewActor ! GetReview(promise, uuid)
+
+          complete(promise.future)
         }
       },
       path( "add_review") {
         post {
           entity(as[SaveReview]) { review =>
-            val resp: Future[(StatusCode, String)] =
-              (reviewActor ? review).mapTo[Try[String]]
-                  .map(_ match {
-                    case Success(msg) => (StatusCodes.OK, msg)
-                    case Failure(ex) => (StatusCodes.BadRequest, ex.getMessage)
-                  })
-            complete(resp)
+            val promise = Promise[Review]()
+            reviewActor ! SaveReviewWithPromise(promise, review)
+            complete(promise.future)
           }
         }
       }

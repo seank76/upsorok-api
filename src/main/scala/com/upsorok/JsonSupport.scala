@@ -9,8 +9,8 @@ import com.upsorok.business.BusinessActor.SaveBusiness
 import com.upsorok.review.Review
 import com.upsorok.review.ReviewActor.SaveReview
 import com.upsorok.user.UserActor.ActionPerformed
-import com.upsorok.user.{Name, User, UserType, Users}
-import spray.json.{DeserializationException, JsArray, JsString, JsValue, JsonFormat}
+import com.upsorok.user._
+import spray.json.{DeserializationException, JsArray, JsObject, JsString, JsValue, JsonFormat}
 
 //#json-support
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -73,12 +73,34 @@ trait JsonSupport extends SprayJsonSupport {
     }
   }
 
+  implicit object EmailFormat extends JsonFormat[Email] {
+    def write(email: Email) = JsString(email.toString())
+    def read(value: JsValue): Email = {
+      value match {
+        case JsString(email) => Email(email)
+        case _ => throw new DeserializationException("Expected JsString")
+      }
+    }
+  }
+
+  implicit object PasswordFormat extends JsonFormat[Password] {
+    def write(password: Password) = JsString(password.toString())
+    def read(value: JsValue): Password = {
+      value match {
+        case JsString(password) => Password(password)
+        case _ => throw new DeserializationException("Expected JsString")
+      }
+    }
+  }
+
   implicit val nameJsonFormat = jsonFormat3(Name)
   implicit val addressJsonFormat = jsonFormat5(Address)
   implicit val businessJsonFormat = jsonFormat3(Business)
   implicit val businessesJsonFormat = jsonFormat1(Businesses)
-  implicit val userJsonFormat = jsonFormat3(User)
+  implicit val loginJsonFormat = jsonFormat2(Login)
+  implicit val userJsonFormat = jsonFormat5(User)
   implicit val usersJsonFormat = jsonFormat1(Users)
+  implicit val sessionJsonFormat = jsonFormat4(Session)
 
   implicit val saveReviewJsonFormat = jsonFormat4(SaveReview)
   implicit val reviewJsonFormat = jsonFormat7(Review)

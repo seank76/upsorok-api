@@ -2,20 +2,19 @@ package com.upsorok.user
 
 import akka.actor._
 import akka.event.Logging
-import akka.pattern.ask
 import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.directives.MethodDirectives.{delete, get, post}
+import akka.http.scaladsl.server.directives.MethodDirectives.{get, post}
 import akka.http.scaladsl.server.directives.PathDirectives.path
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
+import akka.pattern.ask
 import akka.util.Timeout
 import com.upsorok.JsonSupport
-import com.upsorok.exception.UserNotFoundException
+import com.upsorok.exception.AuthenticationFailedException
 import com.upsorok.user.UserActor._
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 //#user-routes-class
 trait UserRoutes extends JsonSupport {
@@ -40,31 +39,37 @@ trait UserRoutes extends JsonSupport {
   concat(
     path("users") {
       get {
-        val users: Future[Users] =
-          (userActor ? GetUsers).mapTo[Users]
-        complete(users)
+        val promise = Promise[Users]()
+        userActor ! GetUsers(promise)
+        complete(promise.future)
       }
     },
     path("add_user") {
       post {
         entity(as[User]) { user =>
-          val fut: Future[(StatusCode, String)] = (userActor ? CreateUser(user)).map {
-            case ActionPerformed(msg) =>
-              (StatusCodes.Created, msg)
-            case ex: Exception =>
-              (StatusCodes.BadRequest, ex.toString)
-          }
-          complete(fut)
+          val promise = Promise[User]()
+          userActor ! CreateUser(promise, user)
+
+          complete(promise.future)
         }
       }
     },
     path("user" / JavaUUID) { uuid =>
       get {
-        val fut: Future[(StatusCode, Option[User])] = (userActor ? GetUser(uuid)).map {
-          case user: User => (StatusCodes.OK, Some(user))
-          case UserNotFoundException(userUUID) => (StatusCodes.NotFound, None)
+        val promise = Promise[User]()
+        userActor ! GetUser(promise, uuid)
+        complete(promise.future)
+      }
+    },
+    path("login") {
+      post {
+        entity(as[Login]) { login =>
+          val fut: Future[(StatusCode, Option[Session])] = (userActor ? Authenticate(login)).map {
+            case session: Session => (StatusCodes.OK, Some(session))
+            case AuthenticationFailedException(_) => (StatusCodes.Unauthorized, None)
+          }
+          complete(fut)
         }
-        complete(fut)
       }
     }
   )

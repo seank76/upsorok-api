@@ -17,6 +17,8 @@ object UserType extends Enum[UserType] {
 
 case class User(uuid: Option[UUID],
                 name: Name,
+                email: Email,
+                password: Password,
                 userTypes: Set[UserType] = Set()) extends WithUUID[User] {
 
   override def withUUID(uuid: UUID): User = copy(uuid = Some(uuid))
