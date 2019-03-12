@@ -3,9 +3,9 @@ package com.upsorok.datastore
 import java.util.UUID
 
 import com.upsorok.business.Business
-import com.upsorok.exception.{BusinessNotFoundException, ReviewNotFoundException, UserNotFoundException}
+import com.upsorok.exception.{BusinessNotFoundException, ReviewNotFoundException, SessionNotFoundException, UserNotFoundException}
 import com.upsorok.review.Review
-import com.upsorok.user.{Email, User}
+import com.upsorok.user.{Email, Session, User}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -30,10 +30,13 @@ abstract class DataStore[T <: WithUUID[T]](implicit val executionContext: Execut
   }
 
   def save(entry: T): Future[T] = {
-    val uuid = UUID.randomUUID()
-    val newEntity = entry.withUUID(uuid)
+    val newEntity = if (entry.uuid.isDefined) {
+      entry
+    } else {
+      entry.withUUID(UUID.randomUUID())
+    }
 
-    store.put(uuid, newEntity)
+    store.put(newEntity.uuid.get, newEntity)
     Future(newEntity)
   }
 
@@ -58,5 +61,9 @@ class DataStoreHub(implicit val executionContext: ExecutionContext) {
 
   val businessDataStore = new DataStore[Business] {
     override def notFoundException(uuid: UUID): Exception = BusinessNotFoundException(uuid)
+  }
+
+  val sessionDataStore = new DataStore[Session] {
+    override def notFoundException(uuid: UUID): Exception = SessionNotFoundException(uuid)
   }
 }

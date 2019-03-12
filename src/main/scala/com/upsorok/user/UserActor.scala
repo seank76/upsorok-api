@@ -9,7 +9,7 @@ import com.upsorok.datastore.DataStoreHub
 import com.upsorok.exception.{AuthenticationFailedException, UserNotFoundException}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Failure, Success, Try}
+import scala.util.Success
 
 final case class Users(users: Seq[User])
 
@@ -19,7 +19,7 @@ object UserActor {
   final case class CreateUser(promise: Promise[User], user: User)
   final case class GetUser(promise: Promise[User], uuid: UUID)
   final case class DeleteUser(uuid: UUID)
-  final case class Authenticate(login: Login)
+  final case class Authenticate(promise: Promise[Session], login: Login)
 
   def props(dataStore: DataStoreHub)(implicit executionContext: ExecutionContext): Props =
     Props(classOf[UserActor], dataStore, executionContext)
@@ -57,25 +57,22 @@ class UserActor(dataStore: DataStoreHub, implicit val executionContext: Executio
           sender() ! UserNotFoundException(uuid)
       }
 
-    case Authenticate(login) =>
-      authenticate(login) map {
-        case Success(session) => sender() ! session
-        case Failure(ex) => sender() ! AuthenticationFailedException(ex.getMessage)
-      }
+    case Authenticate(promise, login) =>
+      authenticate(login).map(session => promise.complete(Success(session)))
+          .recover {
+            case ex => promise.failure(ex)
+          }
   }
 
-  private def authenticate(login: Login): Future[Try[Session]] = {
-    dataStore.userDataStore.getByEmail(login.email).map(_.map(user => {
+  private def authenticate(login: Login): Future[Session] = {
+    dataStore.userDataStore.getByEmail(login.email).map(_.flatMap(user => {
       if (user.password == login.password) {
-        Success(
-          Session(user, Instant.now, Instant.now.plus(Duration.ofDays(14)), UUID.randomUUID())
-        )
+        val session = Session(UUID.randomUUID(), user, Instant.now, Instant.now.plus(Duration.ofDays(14)))
+        dataStore.sessionDataStore.save(session)
+        Some(session)
       } else {
-        Failure(AuthenticationFailedException(s"Failed to authenticate ${login.email}"))
+        None
       }
-    }).getOrElse(Failure(AuthenticationFailedException(s"User with email ${login.email} is not found")))
-    ).recover {
-      case ex => Failure(ex)
-    }
+    }).getOrElse(throw AuthenticationFailedException(s"Authentication failed for ${login.email}")))
   }
 }

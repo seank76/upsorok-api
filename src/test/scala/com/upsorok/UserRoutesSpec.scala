@@ -27,7 +27,7 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
   override val userActor: ActorRef =
     system.actorOf(UserActor.props(dataSource)(executionContext), "userRegistry")
 
-  lazy val routes = userRoutes
+  lazy val routes = userRoutes(null)
 
 
 }

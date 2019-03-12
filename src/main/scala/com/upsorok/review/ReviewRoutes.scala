@@ -11,6 +11,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.upsorok.JsonSupport
 import com.upsorok.review.ReviewActor._
+import com.upsorok.user.Session
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
@@ -29,7 +30,7 @@ trait ReviewRoutes extends JsonSupport {
 
   implicit def executionContext: ExecutionContext
 
-  lazy val reviewRoutes: Route =
+  def reviewRoutes(session: Future[Session]): Route =
     concat(
       path("review" / JavaUUID) { uuid =>
         get {

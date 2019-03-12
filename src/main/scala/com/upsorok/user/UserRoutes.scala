@@ -2,16 +2,13 @@ package com.upsorok.user
 
 import akka.actor._
 import akka.event.Logging
-import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.MethodDirectives.{get, post}
 import akka.http.scaladsl.server.directives.PathDirectives.path
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
-import akka.pattern.ask
 import akka.util.Timeout
 import com.upsorok.JsonSupport
-import com.upsorok.exception.AuthenticationFailedException
 import com.upsorok.user.UserActor._
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -35,7 +32,7 @@ trait UserRoutes extends JsonSupport {
   //#all-routes
   //#users-get-post
   //#users-get-delete
-  lazy val userRoutes: Route =
+  def userRoutes(session: Future[Session]): Route =
   concat(
     path("users") {
       get {
@@ -64,11 +61,9 @@ trait UserRoutes extends JsonSupport {
     path("login") {
       post {
         entity(as[Login]) { login =>
-          val fut: Future[(StatusCode, Option[Session])] = (userActor ? Authenticate(login)).map {
-            case session: Session => (StatusCodes.OK, Some(session))
-            case AuthenticationFailedException(_) => (StatusCodes.Unauthorized, None)
-          }
-          complete(fut)
+          val promise = Promise[Session]()
+          userActor ! Authenticate(promise, login)
+          complete(promise.future)
         }
       }
     }

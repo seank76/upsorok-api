@@ -1,19 +1,17 @@
 package com.upsorok.business
 
-import java.time.Instant
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, Props}
 import com.upsorok.address.Address
-import com.upsorok.datastore.{DataStore, DataStoreHub}
-import com.upsorok.exception.{BusinessNotFoundException, FailedToSaveBusinessException, ReviewNotFoundException, UserNotFoundException}
+import com.upsorok.datastore.DataStoreHub
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 object BusinessActor {
   final case class GetBusiness(promise: Promise[Business], uuid: UUID)
-  final case object GetAllBusinesses
+  final case class GetAllBusinesses(promise: Promise[Businesses])
   final case class SearchBusiness(name: Option[String], address: Option[Address])
   final case class SaveBusiness(name: String, address: Address)
   final case class SaveBusinessWithPromise(promise: Promise[Business], saveBusiness: SaveBusiness)
@@ -33,9 +31,9 @@ class BusinessActor(dataStore: DataStoreHub, implicit val executionContext: Exec
       .recover {
         case ex => promise.failure(ex)
       }
-    case GetAllBusinesses => getAllBusinesses().map(ab => sender() ! ab)
+    case GetAllBusinesses(promise) => getAllBusinesses().map(ab => promise.complete(Success(ab)))
         .recover {
-          case ex => sender() ! ex
+          case ex => promise.failure(ex)
         }
     case SaveBusinessWithPromise(promise, sb) =>
       saveBusiness(sb).map(business => promise.complete(Success(business)))
@@ -56,8 +54,8 @@ class BusinessActor(dataStore: DataStoreHub, implicit val executionContext: Exec
     dataStore.businessDataStore.save(Business(None, sb.name, sb.address))
   }
 
-  private def getAllBusinesses(): Future[Try[Businesses]] = {
+  private def getAllBusinesses(): Future[Businesses] = {
     dataStore.businessDataStore.getAll().map(businesses =>
-      Success(Businesses(businesses.toSeq)))
+      Businesses(businesses.toSeq))
   }
 }

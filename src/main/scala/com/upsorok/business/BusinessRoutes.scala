@@ -11,6 +11,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.upsorok.JsonSupport
 import com.upsorok.business.BusinessActor.{GetAllBusinesses, GetBusiness, SaveBusiness, SaveBusinessWithPromise}
+import com.upsorok.user.Session
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
@@ -29,33 +30,37 @@ trait BusinessRoutes extends JsonSupport {
 
   implicit def executionContext: ExecutionContext
 
-  lazy val businessRoutes: Route =
+  def businessRoutes(session: Future[Session]): Route =
     concat(
       path("business" / JavaUUID) { uuid =>
         get {
-          val promise = Promise[Business]()
-          businessActor ! GetBusiness(promise, uuid)
-          complete(promise.future)
+          val fut = session.flatMap(_ => {
+            val promise = Promise[Business]()
+            businessActor ! GetBusiness(promise, uuid)
+            promise.future
+          })
+          complete(fut)
         }
       },
       path("businesses") {
         get {
-          val resp: Future[(StatusCode, Option[Businesses])] =
-            (businessActor ? GetAllBusinesses).mapTo[Try[Businesses]]
-            .map(_ match {
-              case Success(businesses) => (StatusCodes.OK, Some(businesses))
-              case Failure(ex) => (StatusCodes.NotFound, None)
-            })
-          complete(resp)
+          val fut = session.flatMap(_ => {
+            val promise = Promise[Businesses]()
+            businessActor ! GetAllBusinesses(promise)
+            promise.future
+          })
+          complete(fut)
         }
       },
       path( "add_business") {
         post {
           entity(as[SaveBusiness]) { sb =>
-            val promise = Promise[Business]()
-            businessActor ! SaveBusinessWithPromise(promise, sb)
-
-            complete(promise.future)
+            val fut = session.flatMap(_ => {
+              val promise = Promise[Business]()
+              businessActor ! SaveBusinessWithPromise(promise, sb)
+              promise.future
+            })
+            complete(fut)
           }
         }
       }
